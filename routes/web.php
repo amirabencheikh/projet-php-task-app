@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\admin\UserController;
+use App\Http\Controllers\SocialLoginController;
 
 /*
 |--------------------------------------------------------------------------
@@ -65,5 +66,11 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+Route::get('login/google',[SocialLoginController::class, 'redirectToGoogle']);
+Route::get('login/google/callback',[SocialLoginController::class, 'handleGoogleCallback']);
+
+Route::get('login/facebook',[SocialLoginController::class, 'redirectToFacebook']);
+Route::get('login/facebook/callback',[SocialLoginController::class, 'handleFacebookCallback']);
 
 require __DIR__ . '/auth.php';

@@ -13,6 +13,7 @@
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
     <!-- Scripts -->
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
 </head>
@@ -22,6 +23,7 @@
         @include('partials.navBar')
         @yield('content')
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
 </body>
 
 </html>

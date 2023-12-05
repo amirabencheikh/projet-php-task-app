@@ -7,6 +7,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use GuzzleHttp\Promise\Create;
 use App\Http\Requests\taskRequest;
+use App\Notifications\TaskAssignedNotification;
+use App\Notifications\TaskTerminedNotification;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 
@@ -40,7 +42,7 @@ class TaskController extends Controller
     public function store(Request $request)
     {
 
-        $request->validate( [
+        $request->validate([
             'name' => ['required', 'min:3'],
             'start_date' => ['required', 'date', 'after:tomorrow'],
             'due_date' => ['required', 'date', 'after:start_date'],
@@ -64,12 +66,13 @@ class TaskController extends Controller
         return view('tasks.edit', ['task' => $task]);
     }
     public function update(Task $task, Request $request)
-    { $request->validate( [
-        'name' => ['required', 'min:3'],
-        'start_date' => ['required', 'date', 'after:tomorrow'],
-        'due_date' => ['required', 'date', 'after:start_date'],
-        'description' => ['required', 'min:5'],
-    ]);
+    {
+        $request->validate([
+            'name' => ['required', 'min:3'],
+            'start_date' => ['required', 'date', 'after:tomorrow'],
+            'due_date' => ['required', 'date', 'after:start_date'],
+            'description' => ['required', 'min:5'],
+        ]);
 
         $task->update($request->all());
         return redirect()->route('task.index')->with('success', 'votre tache a bien ete editer');
@@ -100,7 +103,10 @@ class TaskController extends Controller
             'user_assigned_to' => ['required', 'exists:users,id']
         ]);
         $user_assigned_to = $request->input('user_assigned_to');
+
         $user = User::findOrFail($user_assigned_to);
+
+
         $occuped = $user->assigned()
             ->where(function (Builder $query) use ($task) {
                 $query->where(function ($sub) {
@@ -116,12 +122,21 @@ class TaskController extends Controller
         $task->user_assigned_to = $user_assigned_to;
         $task->status = 'en cours';
         $task->save();
+        $user->notify(new TaskAssignedNotification($task));
         return redirect()->route('task.index')->with('success', "la tache a bien ete attribuer a $user->name");
     }
-    public function show($id)
+    public function show(Task $task)
     {
-        $tasks = Task::findOrFail($id);
-        return view('tasks.show', compact('tasks'));
+        $user =User::find(Auth::user()->id);
+        $notification = $user->notifications()->where(function($query) use ($task){
+            $query->where('data->task_id', $task->id)
+            ->where('read_at', null);
+        })->first();
+
+        if($notification){
+            $notification->markAsRead();
+        }
+        return view('tasks.show', compact('task'));
     }
 
     public function startTask(Task $task)
@@ -132,8 +147,10 @@ class TaskController extends Controller
     }
     public function maskAsTermined(Task $task)
     {
+        $user = User::find($task->user_created_by);
         $task->status = 'terminer';
         $task->save();
+        $user->notify(new TaskTerminedNotification($task));
         return redirect()->route('task.MyTask');
     }
 }
